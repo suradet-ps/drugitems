@@ -32,12 +32,13 @@ macro_rules! icon {
 }
 
 icon!(
-    /// Pill/capsule - the DrugItems brand mark.
+    /// The DrugItems brand mark - a detection-target ring with a medical
+    /// cross (mirrors icon-master.svg, drawn in `currentColor`).
     IconLogo,
-    <path d="M10.5 20.5a5.5 5.5 0 0 1-7.7-7.7l8.4-8.4a5.5 5.5 0 0 1 7.7 7.7l-8.4 8.4Z" />
-    <path d="M8.3 8.3l7.4 7.4" />
-    <circle cx="5.8" cy="15.7" r="1.2" />
-    <circle cx="15.7" cy="5.8" r="1.2" />
+    <circle cx="12" cy="12" r="9" />
+    <circle cx="12" cy="12" r="9" stroke-dasharray="3.5 2.5" stroke-width="1.2" opacity="0.55" />
+    <path d="M12 7.6v8.8" stroke-width="2.6" />
+    <path d="M7.6 12h8.8" stroke-width="2.6" />
 );
 
 icon!(
