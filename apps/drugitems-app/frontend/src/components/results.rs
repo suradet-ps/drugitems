@@ -264,10 +264,10 @@ pub fn Results(state: AppState) -> impl IntoView {
                                                                             <tr>
                                                                                 <td class="diff-table__col">{col}</td>
                                                                                 <td class="diff-table__cell">
-                                                                                    {move || if exp_empty { "—".to_string() } else { exp.clone() }}
+                                                                                    {move || if exp_empty { "-".to_string() } else { exp.clone() }}
                                                                                 </td>
                                                                                 <td class="diff-table__cell diff-table__cell--actual">
-                                                                                    {move || if act_empty { "—".to_string() } else { act.clone() }}
+                                                                                    {move || if act_empty { "-".to_string() } else { act.clone() }}
                                                                                 </td>
                                                                             </tr>
                                                                         }

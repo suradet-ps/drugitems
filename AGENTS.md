@@ -1,4 +1,4 @@
-# AGENTS.md — DrugItems
+# AGENTS.md - DrugItems
 
 ## Project Overview
 
@@ -11,9 +11,9 @@ before-after values.
 
 Product scope, UX flows, and compare rules live in this file and in
 `crates/drugitems-core/src/engine.rs`. The visual design system (colors,
-typography, components) lives in **DESIGN.md** at the repo root. This file
-covers agent-facing conventions: stack, build commands, coding rules, and
-the data contract.
+typography, components) lives in **docs/DESIGN.md**. This file covers
+agent-facing conventions: stack, build commands, coding rules, and the
+data contract.
 
 ## Tech Stack
 
@@ -46,7 +46,7 @@ the data contract.
 - **Thai-only UI** (mirrors Med Recon). Backend error messages are Thai at
   the command layer; library crates keep English typed errors.
 
-## Data Contract (`drugitems` table — from the sample snapshot)
+## Data Contract (`drugitems` table - from the sample snapshot)
 
 The provided `drugiterms-20260908.xls` export contains **657 rows × 202
 columns** (sheet `export`, header row 1). Key columns:
