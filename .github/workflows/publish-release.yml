@@ -1,0 +1,115 @@
+name: "Publish Release"
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cargo-audit:
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+
+      - name: Audit dependency advisories
+        # cargo-deny covers advisories on every PR; this is the loud,
+        # dedicated audit on the release path.
+        run: cargo audit
+
+  publish-tauri:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Windows Build
+          - platform: "windows-latest"
+            args: ""
+            trunk-artifact: "trunk-x86_64-pc-windows-msvc.zip"
+          # Linux Build (Ubuntu 24.04)
+          - platform: "ubuntu-24.04"
+            args: ""
+            trunk-artifact: "trunk-x86_64-unknown-linux-gnu.tar.gz"
+          # macOS Build (Apple Silicon)
+          - platform: "macos-latest"
+            args: "--target aarch64-apple-darwin"
+            trunk-artifact: "trunk-aarch64-apple-darwin.tar.gz"
+          # Uncomment if you need Intel Mac support
+          # - platform: "macos-latest"
+          #   args: "--target x86_64-apple-darwin"
+          #   trunk-artifact: "trunk-x86_64-apple-darwin.tar.gz"
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Rust stable (wasm target)
+        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install dependencies (Ubuntu only)
+        if: matrix.platform == 'ubuntu-24.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install Trunk
+        shell: bash
+        run: |
+          # GitHub release downloads occasionally drop the connection;
+          # retry before giving up. Windows ships trunk as a .zip
+          # (trunk.exe at the archive root); every other target is .tar.gz.
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            CURL=curl.exe; ARCHIVE=trunk.zip
+          else
+            CURL=curl; ARCHIVE=trunk.tar.gz
+          fi
+          for attempt in 1 2 3 4; do
+            $CURL -LsSf https://github.com/trunk-rs/trunk/releases/download/v0.21.14/${{ matrix.trunk-artifact }} -o "$ARCHIVE" \
+              && mkdir -p "$HOME/.cargo/bin" \
+              && if [ "$RUNNER_OS" = "Windows" ]; then
+                   powershell -Command "Expand-Archive -Force -Path trunk.zip -DestinationPath trunk-extract"
+                   cp trunk-extract/trunk.exe "$HOME/.cargo/bin/"
+                 else
+                   tar -xzf "$ARCHIVE" -C "$HOME/.cargo/bin"
+                 fi \
+              && break
+            echo "trunk download failed (attempt $attempt/4) - retrying in 10s"
+            sleep 10
+          done
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            test -x "$HOME/.cargo/bin/trunk.exe"
+          else
+            test -x "$HOME/.cargo/bin/trunk"
+          fi
+
+      - name: Build Tauri App
+        uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: apps/drugitems-app
+          tagName: v__VERSION__
+          releaseName: "DrugItems v__VERSION__"
+          releaseBody: "See the assets to download this version and install."
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}
