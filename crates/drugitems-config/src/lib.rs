@@ -432,10 +432,8 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let store = store_in(&dir);
         store.save_connection(&sample_connection()).unwrap();
-        let other = ConfigStore::with_vault(
-            Box::new(InMemoryVault::new()),
-            dir.path().to_path_buf(),
-        );
+        let other =
+            ConfigStore::with_vault(Box::new(InMemoryVault::new()), dir.path().to_path_buf());
         assert!(other.load_connection().is_err());
     }
 

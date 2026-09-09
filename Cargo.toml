@@ -39,7 +39,7 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "fs"] 
 tauri = { version = "2", features = [] }                    # desktop shell
 tauri-build = "2"                                           # tauri context generation
 rfd = "0.17"                                                # native file dialogs (open snapshot / save report)
-calamine = { version = "0.26", features = ["dates"] }       # .xls/.xlsx snapshot reader (source of truth)
+calamine = { version = "0.36", features = ["dates"] }   # .xls/.xlsx snapshot reader (source of truth)
 leptos = "0.8"                                              # reactive UI framework (frontend)
 wasm-bindgen = "0.2"                                        # wasm interop
 wasm-bindgen-futures = "0.4"                                # async on wasm

@@ -64,7 +64,7 @@ pub fn load_snapshot(path: &Path) -> Result<SnapshotTable> {
         detail: detail.to_string(),
     })?;
 
-    let sheet_name = pick_sheet(&mut wb, &path)?;
+    let sheet_name = pick_sheet(&mut wb, path)?;
     let range = wb
         .worksheet_range(&sheet_name)
         .map_err(|detail| SnapshotError::Parse {
@@ -125,9 +125,7 @@ pub fn load_snapshot(path: &Path) -> Result<SnapshotTable> {
     }
 
     Ok(SnapshotTable {
-        file_name: path
-            .file_name()
-            .map(|n| n.to_string_lossy().to_string()),
+        file_name: path.file_name().map(|n| n.to_string_lossy().to_string()),
         columns,
         rows,
     })
@@ -142,10 +140,10 @@ fn pick_sheet(wb: &mut Workbook, path: &Path) -> Result<String> {
         return Ok(names[0].clone());
     }
     for name in &names {
-        if let Ok(range) = wb.worksheet_range(name) {
-            if range.rows().next().is_some() {
-                return Ok(name.clone());
-            }
+        if let Ok(range) = wb.worksheet_range(name)
+            && range.rows().next().is_some()
+        {
+            return Ok(name.clone());
         }
     }
     let _ = path;

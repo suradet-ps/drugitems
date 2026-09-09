@@ -126,7 +126,10 @@ fn map_db_error(err: drugitems_db::Error, action: &'static str) -> CommandError 
 
 /// Maps a snapshot load error to a user-facing file error.
 fn map_snapshot_error(err: drugitems_snapshot::SnapshotError) -> CommandError {
-    CommandError::new(CommandErrorKind::File, format!("อ่านไฟล์ snapshot ไม่สำเร็จ - {err}"))
+    CommandError::new(
+        CommandErrorKind::File,
+        format!("อ่านไฟล์ snapshot ไม่สำเร็จ - {err}"),
+    )
 }
 
 /// Connection settings submitted from the settings dialog. The password
@@ -537,11 +540,17 @@ pub async fn choose_snapshot(
     };
 
     let path = file.clone();
-    let loaded = tauri::async_runtime::spawn_blocking(move || {
-        drugitems_snapshot::load_snapshot(&path)
-    })
-    .await
-    .map_err(|e| dev_log("choose_snapshot", &e, CommandErrorKind::File, "อ่านไฟล์ snapshot ไม่สำเร็จ"))?;
+    let loaded =
+        tauri::async_runtime::spawn_blocking(move || drugitems_snapshot::load_snapshot(&path))
+            .await
+            .map_err(|e| {
+                dev_log(
+                    "choose_snapshot",
+                    &e,
+                    CommandErrorKind::File,
+                    "อ่านไฟล์ snapshot ไม่สำเร็จ",
+                )
+            })?;
     let snapshot = loaded.map_err(map_snapshot_error)?;
 
     let meta = snapshot_meta_of(&snapshot, Some(file.display().to_string()));
@@ -552,18 +561,27 @@ pub async fn choose_snapshot(
         let _ = state.store.save_settings(&settings);
     }
 
-    tracing::info!(rows = meta.rows, columns = meta.columns.len(), "snapshot loaded");
+    tracing::info!(
+        rows = meta.rows,
+        columns = meta.columns.len(),
+        "snapshot loaded"
+    );
     Ok(Some(meta))
 }
 
 /// The loaded snapshot's meta, if any.
 #[tauri::command]
-pub async fn snapshot_info(state: State<'_, AppState>) -> Result<Option<SnapshotMeta>, CommandError> {
+pub async fn snapshot_info(
+    state: State<'_, AppState>,
+) -> Result<Option<SnapshotMeta>, CommandError> {
     let guard = state.snapshot.read().await;
     Ok(guard.as_ref().map(|s| snapshot_meta_of(s, None)))
 }
 
-fn snapshot_meta_of(snapshot: &drugitems_core::SnapshotTable, path: Option<String>) -> SnapshotMeta {
+fn snapshot_meta_of(
+    snapshot: &drugitems_core::SnapshotTable,
+    path: Option<String>,
+) -> SnapshotMeta {
     SnapshotMeta {
         file_name: snapshot.file_name.clone(),
         path,
@@ -585,14 +603,12 @@ pub async fn run_compare(state: State<'_, AppState>) -> Result<CompareReport, Co
         )
     })?;
 
-    let snapshot = state
-        .snapshot
-        .read()
-        .await
-        .clone()
-        .ok_or_else(|| {
-            CommandError::new(CommandErrorKind::File, "ยังไม่ได้เลือกไฟล์ snapshot - เลือกไฟล์ก่อนเปรียบเทียบ")
-        })?;
+    let snapshot = state.snapshot.read().await.clone().ok_or_else(|| {
+        CommandError::new(
+            CommandErrorKind::File,
+            "ยังไม่ได้เลือกไฟล์ snapshot - เลือกไฟล์ก่อนเปรียบเทียบ",
+        )
+    })?;
 
     let client = client(&state, "เปรียบเทียบข้อมูล").await?;
     let db_table = client
@@ -626,9 +642,10 @@ pub async fn run_compare(state: State<'_, AppState>) -> Result<CompareReport, Co
 /// Returns the saved path.
 #[tauri::command]
 pub async fn export_report(state: State<'_, AppState>) -> Result<String, CommandError> {
-    let report = state.report.read().await.clone().ok_or_else(|| {
-        CommandError::new(CommandErrorKind::File, "ยังไม่มีผลการเปรียบเทียบให้บันทึก")
-    })?;
+    let report =
+        state.report.read().await.clone().ok_or_else(|| {
+            CommandError::new(CommandErrorKind::File, "ยังไม่มีผลการเปรียบเทียบให้บันทึก")
+        })?;
     let csv = crate::report::build_csv(&report);
     let path = rfd::AsyncFileDialog::new()
         .set_title("บันทึกรายงานความแตกต่าง")

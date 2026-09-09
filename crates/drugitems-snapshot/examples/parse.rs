@@ -11,11 +11,12 @@ fn main() {
     }
     match drugitems_snapshot::load_snapshot(Path::new(&args[1])) {
         Ok(table) => {
+            println!("file: {}", table.file_name.as_deref().unwrap_or("<none>"));
             println!(
-                "file: {}",
-                table.file_name.as_deref().unwrap_or("<none>")
+                "columns ({}): {:?}",
+                table.columns.len(),
+                &table.columns[..table.columns.len().min(8)]
             );
-            println!("columns ({}): {:?}", table.columns.len(), &table.columns[..table.columns.len().min(8)]);
             println!("rows: {}", table.rows.len());
             if let Some((code, cells)) = table.rows.iter().next() {
                 println!("first row key: {code}");

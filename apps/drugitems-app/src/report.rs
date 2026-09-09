@@ -47,9 +47,7 @@ fn esc(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use drugitems_core::{
-        CellView, ColumnCount, ColumnDiff, ColumnKind, Counts, RowDiff,
-    };
+    use drugitems_core::{CellView, ColumnCount, ColumnDiff, ColumnKind, Counts, RowDiff};
 
     fn sample_report() -> CompareReport {
         CompareReport {

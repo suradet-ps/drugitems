@@ -259,7 +259,10 @@ fn parse_time(cell: Option<&RawCell>) -> Parse<NaiveTime> {
         Some(RawCell::Text(s)) => {
             let s = s.trim();
             let fmt = |f: &str| NaiveTime::parse_from_str(s, f).ok();
-            match fmt("%H:%M:%S%.f").or_else(|| fmt("%H:%M:%S")).or_else(|| fmt("%H:%M")) {
+            match fmt("%H:%M:%S%.f")
+                .or_else(|| fmt("%H:%M:%S"))
+                .or_else(|| fmt("%H:%M"))
+            {
                 Some(t) => Parse::Value(t),
                 None => Parse::Invalid,
             }
@@ -405,10 +408,7 @@ fn display(cell: Option<&RawCell>, kind: ColumnKind) -> CellView {
         text: String::new(),
         empty: true,
     };
-    let filled = |text: String| CellView {
-        text,
-        empty: false,
-    };
+    let filled = |text: String| CellView { text, empty: false };
     match kind {
         ColumnKind::Text => match canonical_text(cell) {
             None => empty,
@@ -475,10 +475,7 @@ mod tests {
                     kind: ColumnKind::Text,
                 },
             ],
-            rows: rows
-                .into_iter()
-                .map(|(k, v)| (k.to_string(), v))
-                .collect(),
+            rows: rows.into_iter().map(|(k, v)| (k.to_string(), v)).collect(),
         }
     }
 
@@ -492,10 +489,7 @@ mod tests {
                 "lastupdatestdprice".into(),
                 "istatus".into(),
             ],
-            rows: rows
-                .into_iter()
-                .map(|(k, v)| (k.to_string(), v))
-                .collect(),
+            rows: rows.into_iter().map(|(k, v)| (k.to_string(), v)).collect(),
         }
     }
 
@@ -552,7 +546,11 @@ mod tests {
             ("lastupdatestdprice", num(44961.619791666664)),
             ("istatus", text("N")),
         ]);
-        let report = compare(&db_table(vec![("1000001", db_cells)]), &snapshot_table(vec![("1000001", snap_cells)]), &ignore(&[]));
+        let report = compare(
+            &db_table(vec![("1000001", db_cells)]),
+            &snapshot_table(vec![("1000001", snap_cells)]),
+            &ignore(&[]),
+        );
         assert_eq!(report.counts.unchanged, 1, "must not raise a false alarm");
     }
 
@@ -562,7 +560,11 @@ mod tests {
         // 10 compare equal. Rare in HOSxP icodes but a known blind spot.
         let db_cells = row(&[("icode", text("010")), ("name", text("X"))]);
         let snap_cells = row(&[("icode", num(10.0)), ("name", text("X"))]);
-        let report = compare(&db_table(vec![("010", db_cells)]), &snapshot_table(vec![("010", snap_cells)]), &ignore(&[]));
+        let report = compare(
+            &db_table(vec![("010", db_cells)]),
+            &snapshot_table(vec![("010", snap_cells)]),
+            &ignore(&[]),
+        );
         assert_eq!(report.counts.unchanged, 1);
     }
 
@@ -582,7 +584,11 @@ mod tests {
             ("lastupdatestdprice", num(44961.619791666664)),
             ("istatus", text("N")),
         ]);
-        let report = compare(&db_table(vec![("1000001", db_cells)]), &snapshot_table(vec![("1000001", snap_cells)]), &ignore(&[]));
+        let report = compare(
+            &db_table(vec![("1000001", db_cells)]),
+            &snapshot_table(vec![("1000001", snap_cells)]),
+            &ignore(&[]),
+        );
         assert_eq!(report.counts.changed, 1);
         assert_eq!(report.rows.len(), 1);
         let diff = &report.rows[0];
@@ -602,41 +608,53 @@ mod tests {
         let new_cells = row(&[("icode", text("9999999")), ("name", text("ใหม่"))]);
         let gone_cells = row(&[("icode", text("8888888")), ("name", text("หายไป"))]);
         let report = compare(
-            &db_table(vec![
-                ("1000001", db_cells),
-                ("9999999", new_cells),
-            ]),
-            &snapshot_table(vec![
-                ("1000001", snap_cells),
-                ("8888888", gone_cells),
-            ]),
+            &db_table(vec![("1000001", db_cells), ("9999999", new_cells)]),
+            &snapshot_table(vec![("1000001", snap_cells), ("8888888", gone_cells)]),
             &ignore(&[]),
         );
         assert_eq!(report.counts.unchanged, 1);
         assert_eq!(report.counts.added_in_db, 1);
         assert_eq!(report.counts.missing_in_db, 1);
-        assert!(report
-            .rows
-            .iter()
-            .any(|r| r.status == ChangeStatus::AddedInDb && r.code == "9999999" && r.name.as_deref() == Some("ใหม่")));
-        assert!(report
-            .rows
-            .iter()
-            .any(|r| r.status == ChangeStatus::MissingInDb && r.code == "8888888"));
+        assert!(
+            report
+                .rows
+                .iter()
+                .any(|r| r.status == ChangeStatus::AddedInDb
+                    && r.code == "9999999"
+                    && r.name.as_deref() == Some("ใหม่"))
+        );
+        assert!(
+            report
+                .rows
+                .iter()
+                .any(|r| r.status == ChangeStatus::MissingInDb && r.code == "8888888")
+        );
     }
 
     #[test]
     fn null_and_blank_are_equivalent() {
         let db_cells = row(&[("icode", text("1")), ("name", RawCell::Null)]);
         let snap_cells = row(&[("icode", text("1")), ("name", RawCell::Text("".into()))]);
-        let report = compare(&db_table(vec![("1", db_cells)]), &snapshot_table(vec![("1", snap_cells)]), &ignore(&[]));
+        let report = compare(
+            &db_table(vec![("1", db_cells)]),
+            &snapshot_table(vec![("1", snap_cells)]),
+            &ignore(&[]),
+        );
         assert_eq!(report.counts.unchanged, 1);
     }
 
     #[test]
     fn ignored_columns_are_not_compared() {
-        let db_cells = row(&[("icode", text("1")), ("name", text("A")), ("unitprice", text("99"))]);
-        let snap_cells = row(&[("icode", text("1")), ("name", text("A")), ("unitprice", num(1.0))]);
+        let db_cells = row(&[
+            ("icode", text("1")),
+            ("name", text("A")),
+            ("unitprice", text("99")),
+        ]);
+        let snap_cells = row(&[
+            ("icode", text("1")),
+            ("name", text("A")),
+            ("unitprice", num(1.0)),
+        ]);
         let report = compare(
             &db_table(vec![("1", db_cells)]),
             &snapshot_table(vec![("1", snap_cells)]),
@@ -689,8 +707,16 @@ mod tests {
             .collect(),
         };
         let report = compare(&db, &snap, &ignore(&[]));
-        assert_eq!(report.counts.unchanged, 1, "no cell comparison for non-shared columns");
-        assert!(report.schema_notes.iter().any(|n| n.contains("drugaccount")));
+        assert_eq!(
+            report.counts.unchanged, 1,
+            "no cell comparison for non-shared columns"
+        );
+        assert!(
+            report
+                .schema_notes
+                .iter()
+                .any(|n| n.contains("drugaccount"))
+        );
         assert!(report.schema_notes.iter().any(|n| n.contains("extra_col")));
     }
 
@@ -740,10 +766,7 @@ mod tests {
                     kind: ColumnKind::Text,
                 },
             ],
-            rows: rows
-                .into_iter()
-                .map(|(k, v)| (k.to_string(), v))
-                .collect(),
+            rows: rows.into_iter().map(|(k, v)| (k.to_string(), v)).collect(),
         }
     }
 
@@ -751,10 +774,7 @@ mod tests {
         SnapshotTable {
             file_name: Some("s.xls".into()),
             columns: vec!["icode".into(), "name".into(), "show_notify_text".into()],
-            rows: rows
-                .into_iter()
-                .map(|(k, v)| (k.to_string(), v))
-                .collect(),
+            rows: rows.into_iter().map(|(k, v)| (k.to_string(), v)).collect(),
         }
     }
 
@@ -775,7 +795,10 @@ mod tests {
             &text_snapshot(vec![("1000004", snap_cells)]),
             &ignore(&[]),
         );
-        assert_eq!(report.counts.unchanged, 1, "whitespace artifacts must not be reported");
+        assert_eq!(
+            report.counts.unchanged, 1,
+            "whitespace artifacts must not be reported"
+        );
     }
 
     #[test]

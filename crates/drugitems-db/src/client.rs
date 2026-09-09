@@ -5,8 +5,8 @@ use std::time::Duration;
 
 use drugitems_core::{ColumnKind, ColumnMeta, DbTable, RawCell, RowCells};
 use secrecy::ExposeSecret;
-use sqlx::mysql::{MySqlConnectOptions, MySqlPool, MySqlPoolOptions};
 use sqlx::Row;
+use sqlx::mysql::{MySqlConnectOptions, MySqlPool, MySqlPoolOptions};
 use tracing::info;
 
 use crate::config::DbConfig;
@@ -70,21 +70,11 @@ impl DbClient {
         }
         let mut schema: Vec<SchemaEntry> = Vec::with_capacity(rows.len());
         for row in rows {
-            let name: String = row
-                .try_get(0)
-                .map_err(|e| Error::RowShape(e.to_string()))?;
-            let data_type: String = row
-                .try_get(1)
-                .map_err(|e| Error::RowShape(e.to_string()))?;
+            let name: String = row.try_get(0).map_err(|e| Error::RowShape(e.to_string()))?;
+            let data_type: String = row.try_get(1).map_err(|e| Error::RowShape(e.to_string()))?;
             let binary = is_binary_type(&data_type);
             let kind = data_kind(&data_type);
-            schema.push((
-                ColumnMeta {
-                    name,
-                    kind,
-                },
-                binary,
-            ));
+            schema.push((ColumnMeta { name, kind }, binary));
         }
         Ok(schema)
     }
@@ -141,9 +131,8 @@ impl DbClient {
                 if i == code_col {
                     continue;
                 }
-                let value: Option<String> = row
-                    .try_get(i)
-                    .map_err(|e| Error::RowShape(e.to_string()))?;
+                let value: Option<String> =
+                    row.try_get(i).map_err(|e| Error::RowShape(e.to_string()))?;
                 cells.insert(
                     meta.name.clone(),
                     match value {
@@ -176,8 +165,8 @@ fn is_binary_type(data_type: &str) -> bool {
 /// Map a MySQL `DATA_TYPE` to a compare [`ColumnKind`].
 fn data_kind(data_type: &str) -> ColumnKind {
     match data_type.to_lowercase().as_str() {
-        "tinyint" | "smallint" | "mediumint" | "int" | "integer" | "bigint" | "year"
-        | "float" | "double" | "decimal" | "numeric" | "real" | "bit" => ColumnKind::Numeric,
+        "tinyint" | "smallint" | "mediumint" | "int" | "integer" | "bigint" | "year" | "float"
+        | "double" | "decimal" | "numeric" | "real" | "bit" => ColumnKind::Numeric,
         "date" => ColumnKind::Date,
         "datetime" | "timestamp" => ColumnKind::DateTime,
         "time" => ColumnKind::Time,

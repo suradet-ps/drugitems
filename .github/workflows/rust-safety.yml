@@ -1,0 +1,65 @@
+name: Rust Safety Check
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  # Runs the standard `-D warnings` lint set on the whole workspace.
+  clippy-workspace:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install system dependencies (Tauri on Linux)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - name: Create dist placeholder (required by tauri::generate_context!)
+        run: mkdir -p apps/drugitems-app/frontend/dist && touch apps/drugitems-app/frontend/dist/index.html
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+        with:
+          components: clippy
+
+      - name: Rust Cache
+        uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: ". -> target"
+
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+
+  miri-test:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        crate:
+          - drugitems-core
+          - drugitems-config
+          - drugitems-bridge
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Rust nightly
+        uses: dtolnay/rust-toolchain@be39649afda95dbf70f87cce95f68b8d5797b296 # nightly
+        with:
+          components: miri
+
+      - name: Rust Cache
+        uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: ". -> target"
+
+      # drugitems-config/drugitems-core tests use tempfile (real mkdir) -
+      # allow filesystem ops under Miri while still checking for UB.
+      - name: Run Miri
+        env:
+          MIRIFLAGS: -Zmiri-disable-isolation
+        run: cargo +nightly miri test -p ${{ matrix.crate }}

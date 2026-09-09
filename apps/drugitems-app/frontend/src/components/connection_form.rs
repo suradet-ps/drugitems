@@ -147,10 +147,7 @@ pub fn ConnectionForm(state: AppState, title: &'static str) -> impl IntoView {
             if generation.get_untracked() == token {
                 match result {
                     Ok(()) => {
-                        message.set(Some((
-                            true,
-                            "บันทึกการตั้งค่าและเชื่อมต่อแล้ว".to_string(),
-                        )));
+                        message.set(Some((true, "บันทึกการตั้งค่าและเชื่อมต่อแล้ว".to_string())));
                         state.configured.set(true);
                         state.health.set(ConnectionHealth::Connected);
                     }

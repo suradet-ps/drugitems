@@ -15,6 +15,6 @@ pub mod serial;
 
 pub use engine::compare;
 pub use model::{
-    CellView, ChangeStatus, ColumnCount, ColumnDiff, ColumnKind, ColumnMeta, CompareReport,
-    Counts, DbTable, RawCell, RowCells, RowDiff, SnapshotTable,
+    CellView, ChangeStatus, ColumnCount, ColumnDiff, ColumnKind, ColumnMeta, CompareReport, Counts,
+    DbTable, RawCell, RowCells, RowDiff, SnapshotTable,
 };

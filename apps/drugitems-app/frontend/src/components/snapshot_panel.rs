@@ -16,9 +16,9 @@ pub fn SnapshotPanel(state: AppState) -> impl IntoView {
                     state.snapshot.set(Some(meta));
                     state.report.set(None);
                     state.compare_error.set(None);
-                    state
-                        .last_action
-                        .set(Some("เลือกไฟล์ snapshot แล้ว - กด เปรียบเทียบข้อมูล เพื่อตรวจสอบ".to_string()));
+                    state.last_action.set(Some(
+                        "เลือกไฟล์ snapshot แล้ว - กด เปรียบเทียบข้อมูล เพื่อตรวจสอบ".to_string(),
+                    ));
                 }
                 Ok(None) => {}
                 Err(e) => state.compare_error.set(Some(e.message)),
@@ -47,11 +47,9 @@ pub fn SnapshotPanel(state: AppState) -> impl IntoView {
     let export = move || {
         spawn_local(async move {
             match api::export_report().await {
-                Ok(path) => {
-                    state
-                        .last_action
-                        .set(Some(format!("บันทึกรายงานแล้ว: {path}")))
-                }
+                Ok(path) => state
+                    .last_action
+                    .set(Some(format!("บันทึกรายงานแล้ว: {path}"))),
                 Err(e) => state.compare_error.set(Some(e.message)),
             }
         });
