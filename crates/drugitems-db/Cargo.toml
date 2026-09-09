@@ -1,0 +1,16 @@
+[package]
+name = "drugitems-db"
+description = "DrugItems MySQL/MariaDB read-only repository (sqlx) - schema introspection + full drugitems snapshot read, guarded SELECT-only"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+drugitems-core = { workspace = true }
+sqlx = { workspace = true }
+secrecy = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }

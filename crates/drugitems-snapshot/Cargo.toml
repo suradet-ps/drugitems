@@ -1,0 +1,13 @@
+[package]
+name = "drugitems-snapshot"
+description = "DrugItems .xls/.xlsx snapshot loader (calamine) - turns an exported spreadsheet into the source-of-truth SnapshotTable"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+drugitems-core = { workspace = true }
+calamine = { workspace = true }
+thiserror = { workspace = true }

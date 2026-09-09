@@ -1,0 +1,19 @@
+[package]
+name = "drugitems-frontend"
+description = "DrugItems Leptos 0.8 CSR frontend (compiled to WASM via trunk)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+drugitems-core = { workspace = true }
+drugitems-bridge = { workspace = true }
+leptos = { workspace = true, features = ["csr"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+wasm-bindgen = { workspace = true }
+wasm-bindgen-futures = { workspace = true }
+js-sys = { workspace = true }
+web-sys = { workspace = true, features = ["Window"] }

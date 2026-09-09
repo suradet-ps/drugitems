@@ -1,0 +1,27 @@
+[package]
+name = "drugitems-app"
+description = "DrugItems desktop shell: Tauri 2 backend serving the Leptos frontend"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[build-dependencies]
+tauri-build = { workspace = true }
+
+[dependencies]
+drugitems-core = { workspace = true }
+drugitems-snapshot = { workspace = true }
+drugitems-db = { workspace = true }
+drugitems-config = { workspace = true }
+sqlx = { workspace = true }             # error classification in map_db_error
+tauri = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+rfd = { workspace = true }
+secrecy = { workspace = true }          # password wrapper in ConnectionInput conversion
+encryptman = "0.3.0"                    # ephemeral vault fallback (headless)

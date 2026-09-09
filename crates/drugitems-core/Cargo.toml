@@ -1,0 +1,12 @@
+[package]
+name = "drugitems-core"
+description = "DrugItems pure domain: snapshot/DB model, canonicalization, and the cell-by-cell compare engine - testable without a database or file"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+chrono = { version = "0.4", default-features = false, features = ["serde", "std", "clock"] }
