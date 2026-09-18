@@ -8,7 +8,7 @@ permissions:
 jobs:
   # Runs the standard `-D warnings` lint set on the whole workspace.
   clippy-workspace:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -35,7 +35,7 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
 
   miri-test:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     strategy:
       matrix:
         crate:
