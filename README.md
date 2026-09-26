@@ -1,13 +1,11 @@
 # DrugItems
 
-```
-██████╗ ██████╗ ██╗   ██╗ ██████╗ ██╗████████╗███████╗███╗   ███╗███████╗
-██╔══██╗██╔══██╗██║   ██║██╔════╝ ██║╚══██╔══╝██╔════╝████╗ ████║██╔════╝
-██║  ██║██████╔╝██║   ██║██║  ███╗██║   ██║   █████╗  ██╔████╔██║███████╗
-██║  ██║██╔══██╗██║   ██║██║   ██║██║   ██║   ██╔══╝  ██║╚██╔╝██║╚════██║
-██████╔╝██║  ██║╚██████╔╝╚██████╔╝██║   ██║   ███████╗██║ ╚═╝ ██║███████║
-╚═════╝ ╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝   ╚═╝   ╚══════╝╚═╝     ╚═╝╚══════╝
-```
+[![CI](https://github.com/suradet-ps/drugitems/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/suradet-ps/drugitems/actions/workflows/ci.yml)
+[![Rust Safety Check](https://github.com/suradet-ps/drugitems/actions/workflows/rust-safety.yml/badge.svg?branch=main)](https://github.com/suradet-ps/drugitems/actions/workflows/rust-safety.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE-MIT)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE-APACHE)
+[![Tauri 2](https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white)](https://tauri.app/)
+[![Leptos 0.8](https://img.shields.io/badge/Leptos-0.8-blue.svg)](https://leptos.dev)
 
 ---
 
