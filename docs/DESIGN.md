@@ -32,7 +32,8 @@ added / missing) use restrained green / amber / blue / red washes.
 > generic controls.
 
 ### Brand & Accent
-- **Brand Coral** (`{colors.brand-coral}`): The single product-identity accent. Used on the snapshot card, the "SOURCE OF TRUTH" pill, and the app logo mark. Carries the product's most attention-grabbing energy - the source of truth is the hero.
+- **Brand Coral** (`{colors.brand-coral}`): The single product-identity accent. Used on the snapshot card and the "SOURCE OF TRUTH" pill. Carries the product's most attention-grabbing energy - the source of truth is the hero.
+- **Brand Mark** (`icon-master.svg`): The app mark is self-contained full-color artwork - a neumorphic light card (`#F0F4F8`→`#E2E8F0`) holding a 6×6 status matrix (idle `#CBD5E1`; active emerald `#34D399`→`#059669`; center alert `#F87171`→`#DC2626`) with a floating slate check badge (`#94A3B8`→`#475569`). Its colors live inside the SVG - they are not UI tokens and never flow into controls.
 - **Brand Blue** (`{colors.brand-blue}`): Form-control activation (2px focus ring), link emphasis.
 - **Brand Blue 200** (`{colors.brand-blue-200}`): "ใหม่ใน DB" badge background, info-tag backgrounds.
 
@@ -114,6 +115,7 @@ The system runs predominantly flat. Elevation is reserved for modal overlays.
 
 ### Decorative Depth
 - The coral snapshot card carries its identity via color alone - no shadow needed; the color does the work.
+- The app mark (`icon-master.svg`) is the one place that carries its own neumorphic depth (paired light/dark drop shadows). It is artwork, not UI elevation - keep it out of the surface hierarchy.
 
 ## Shapes
 
@@ -214,7 +216,7 @@ The system runs predominantly flat. Elevation is reserved for modal overlays.
 
 **Top Navigation** - Sticky white bar.
 - Background `{colors.canvas}`, height 56px, bottom border `1px solid {colors.hairline-soft}`.
-- Left: coral app mark + "DrugItems" wordmark (+ site label).
+- Left: full-color app mark (`icon-master.svg`, 26×26) + "DrugItems" wordmark (+ site label).
 - Right: status pill, pill buttons วิธีใช้ / ตั้งค่า.
 
 **Sidebar Rail** - Left control rail.
@@ -241,7 +243,7 @@ The system runs predominantly flat. Elevation is reserved for modal overlays.
 - `{colors.warn-bg}` background, `{colors.warn-text}` text, `{rounded.md}`.
 
 **`setup-card`** - First-run hero.
-- `{colors.canvas}`, `{rounded.xxxl}`, `{elev-2}`, 540px, `{spacing.xxl}` padding, coral mark + 22px title.
+- `{colors.canvas}`, `{rounded.xxxl}`, `{elev-2}`, 540px, `{spacing.xxl}` padding, 22px title + connection form.
 
 **`help-modal`** - Usage manual.
 - 520px modal, `{rounded.xl}`, `{elev-4}`; headings `{typography.panel-title}`, body `{typography.body-sm}` `{colors.steel}`.
@@ -250,7 +252,7 @@ The system runs predominantly flat. Elevation is reserved for modal overlays.
 
 ### Do
 - Use `{colors.primary}` (black) as the dominant CTA - the brand's most recognizable interactive element.
-- Reserve `{colors.brand-coral}` for identity moments: the snapshot card, the "SOURCE OF TRUTH" pill, the app mark. Never for generic buttons.
+- Reserve `{colors.brand-coral}` for identity moments: the snapshot card and the "SOURCE OF TRUTH" pill. Never for generic buttons.
 - Apply `{rounded.full}` to every button, every pill tab, every badge.
 - Keep semantic statuses in their own language: green = ตรงกัน, amber = ต่าง, blue = ใหม่, red = หาย.
 - Keep tables flat with hairlines; the data does the work.

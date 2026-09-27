@@ -1,9 +1,11 @@
-//! Lucide-style SVG icon components.
+//! SVG icon components.
 //!
-//! Stroke-based icons (24×24 viewBox, `currentColor`, 2px stroke, round
-//! caps) - render crisply at any size and inherit their color from the
-//! surrounding text. Icons are decorative: `aria-hidden` and never carry
-//! text alternatives; nearby text always explains the state.
+//! Lucide-style stroke icons (24×24 viewBox, `currentColor`, 2px stroke,
+//! round caps) - render crisply at any size and inherit their color from
+//! the surrounding text. `IconLogo` is the exception: the full-color brand
+//! mark mirroring `icon-master.svg`. Icons are decorative: `aria-hidden`
+//! and never carry text alternatives; nearby text always explains the
+//! state.
 
 use leptos::prelude::*;
 
@@ -31,15 +33,97 @@ macro_rules! icon {
     };
 }
 
-icon!(
-    /// The DrugItems brand mark - a detection-target ring with a medical
-    /// cross (mirrors icon-master.svg, drawn in `currentColor`).
-    IconLogo,
-    <circle cx="12" cy="12" r="9" />
-    <circle cx="12" cy="12" r="9" stroke-dasharray="3.5 2.5" stroke-width="1.2" opacity="0.55" />
-    <path d="M12 7.6v8.8" stroke-width="2.6" />
-    <path d="M7.6 12h8.8" stroke-width="2.6" />
-);
+/// The DrugItems brand mark - the full-color app icon (`icon-master.svg`:
+/// neumorphic card, 6×6 status matrix, slate check badge), embedded inline
+/// so it scales with CSS.
+#[component]
+pub fn IconLogo(class: &'static str) -> impl IntoView {
+    view! {
+        <svg class=class viewBox="0 0 512 512" aria-hidden="true">
+            <defs>
+                <linearGradient id="neuBg" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#F0F4F8" />
+                    <stop offset="100%" stop-color="#E2E8F0" />
+                </linearGradient>
+                <linearGradient id="emeraldActive" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#34D399" />
+                    <stop offset="100%" stop-color="#059669" />
+                </linearGradient>
+                <linearGradient id="redAlert" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#F87171" />
+                    <stop offset="100%" stop-color="#DC2626" />
+                </linearGradient>
+                <linearGradient id="slateBadge" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#94A3B8" />
+                    <stop offset="100%" stop-color="#475569" />
+                </linearGradient>
+                <filter id="neuShadowApp" x="-20%" y="-20%" width="140%" height="140%">
+                    <feDropShadow dx="12" dy="16" stdDeviation="18" flood-color="#94A3B8" flood-opacity="0.5" />
+                    <feDropShadow dx="-10" dy="-10" stdDeviation="16" flood-color="#FFFFFF" flood-opacity="0.9" />
+                </filter>
+                <filter id="neuBadgeShadow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feDropShadow dx="8" dy="12" stdDeviation="12" flood-color="#475569" flood-opacity="0.35" />
+                    <feDropShadow dx="-4" dy="-4" stdDeviation="8" flood-color="#FFFFFF" flood-opacity="0.8" />
+                </filter>
+                <filter id="dotShadow" x="-30%" y="-30%" width="160%" height="160%">
+                    <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#0F172A" flood-opacity="0.2" />
+                </filter>
+            </defs>
+
+            <rect x="16" y="16" width="480" height="480" rx="96" fill="url(#neuBg)" filter="url(#neuShadowApp)" />
+            <rect x="24" y="24" width="464" height="464" rx="88" fill="none" stroke="#FFFFFF" stroke-width="3" opacity="0.8" />
+
+            <g transform="translate(86, 86)">
+                <circle cx="0" cy="0" r="18" fill="#CBD5E1" opacity="0.7" />
+                <circle cx="68" cy="0" r="18" fill="#CBD5E1" opacity="0.7" />
+                <circle cx="136" cy="0" r="18" fill="#CBD5E1" opacity="0.7" />
+                <circle cx="204" cy="0" r="18" fill="#CBD5E1" opacity="0.7" />
+                <circle cx="272" cy="0" r="18" fill="#CBD5E1" opacity="0.7" />
+                <circle cx="340" cy="0" r="18" fill="#CBD5E1" opacity="0.7" />
+
+                <circle cx="0" cy="68" r="18" fill="#CBD5E1" opacity="0.7" />
+                <circle cx="68" cy="68" r="22" fill="url(#emeraldActive)" filter="url(#dotShadow)" />
+                <circle cx="136" cy="68" r="22" fill="url(#emeraldActive)" filter="url(#dotShadow)" />
+                <circle cx="204" cy="68" r="22" fill="url(#emeraldActive)" filter="url(#dotShadow)" />
+                <circle cx="272" cy="68" r="18" fill="#CBD5E1" opacity="0.7" />
+                <circle cx="340" cy="68" r="18" fill="#CBD5E1" opacity="0.7" />
+
+                <circle cx="0" cy="136" r="18" fill="#CBD5E1" opacity="0.7" />
+                <circle cx="68" cy="136" r="22" fill="url(#emeraldActive)" filter="url(#dotShadow)" />
+                <circle cx="136" cy="136" r="26" fill="url(#redAlert)" filter="url(#dotShadow)" />
+                <circle cx="204" cy="136" r="22" fill="url(#emeraldActive)" filter="url(#dotShadow)" />
+                <circle cx="272" cy="136" r="18" fill="#CBD5E1" opacity="0.7" />
+                <circle cx="340" cy="136" r="18" fill="#CBD5E1" opacity="0.7" />
+
+                <circle cx="0" cy="204" r="18" fill="#CBD5E1" opacity="0.7" />
+                <circle cx="68" cy="204" r="22" fill="url(#emeraldActive)" filter="url(#dotShadow)" />
+                <circle cx="136" cy="204" r="22" fill="url(#emeraldActive)" filter="url(#dotShadow)" />
+                <circle cx="204" cy="204" r="22" fill="url(#emeraldActive)" filter="url(#dotShadow)" />
+                <circle cx="272" cy="204" r="18" fill="#CBD5E1" opacity="0.7" />
+                <circle cx="340" cy="204" r="18" fill="#CBD5E1" opacity="0.7" />
+
+                <circle cx="0" cy="272" r="18" fill="#CBD5E1" opacity="0.7" />
+                <circle cx="68" cy="272" r="18" fill="#CBD5E1" opacity="0.7" />
+                <circle cx="136" cy="272" r="18" fill="#CBD5E1" opacity="0.7" />
+                <circle cx="204" cy="272" r="18" fill="#CBD5E1" opacity="0.7" />
+                <circle cx="272" cy="272" r="18" fill="#CBD5E1" opacity="0.7" />
+                <circle cx="340" cy="272" r="18" fill="#CBD5E1" opacity="0.7" />
+
+                <circle cx="0" cy="340" r="18" fill="#CBD5E1" opacity="0.7" />
+                <circle cx="68" cy="340" r="18" fill="#CBD5E1" opacity="0.7" />
+                <circle cx="136" cy="340" r="18" fill="#CBD5E1" opacity="0.7" />
+                <circle cx="204" cy="340" r="18" fill="#CBD5E1" opacity="0.7" />
+                <circle cx="272" cy="340" r="18" fill="#CBD5E1" opacity="0.7" />
+                <circle cx="340" cy="340" r="18" fill="#CBD5E1" opacity="0.7" />
+            </g>
+
+            <g filter="url(#neuBadgeShadow)">
+                <circle cx="396" cy="396" r="78" fill="url(#slateBadge)" stroke="#FFFFFF" stroke-width="10" />
+                <path d="M 356 396 L 382 422 L 436 368" fill="none" stroke="#FFFFFF" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+            </g>
+        </svg>
+    }
+}
 
 icon!(
     /// Magnifying glass - search actions.
