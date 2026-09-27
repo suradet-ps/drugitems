@@ -24,4 +24,4 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 rfd = { workspace = true }
 secrecy = { workspace = true }          # password wrapper in ConnectionInput conversion
-encryptman = "0.4.0"                    # ephemeral vault fallback (headless)
+encryptman = "0.5.0"                    # ephemeral vault fallback (headless)
