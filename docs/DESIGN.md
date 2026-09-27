@@ -33,7 +33,7 @@ added / missing) use restrained green / amber / blue / red washes.
 
 ### Brand & Accent
 - **Brand Coral** (`{colors.brand-coral}`): The single product-identity accent. Used on the snapshot card and the "SOURCE OF TRUTH" pill. Carries the product's most attention-grabbing energy - the source of truth is the hero.
-- **Brand Mark** (`icon-master.svg`): The app mark is self-contained full-color artwork - a neumorphic light card (`#F0F4F8`→`#E2E8F0`) holding a 6×6 status matrix (idle `#CBD5E1`; active emerald `#34D399`→`#059669`; center alert `#F87171`→`#DC2626`) with a floating slate check badge (`#94A3B8`→`#475569`). Its colors live inside the SVG - they are not UI tokens and never flow into controls.
+- **Brand Mark** (`icon-master.svg`): The app mark is self-contained full-color artwork - a light card (`#FFFFFF`→`#F1F5F9`) holding a 6×6 status matrix (idle `#CBD5E1`; active emerald `#10B981`→`#047857`; center alert `#EF4444`→`#B91C1C`) with a floating grey check badge (`#94A3B8`→`#475569`) and a soft glow on the active dots. Its colors live inside the SVG - they are not UI tokens and never flow into controls.
 - **Brand Blue** (`{colors.brand-blue}`): Form-control activation (2px focus ring), link emphasis.
 - **Brand Blue 200** (`{colors.brand-blue-200}`): "ใหม่ใน DB" badge background, info-tag backgrounds.
 
@@ -115,7 +115,7 @@ The system runs predominantly flat. Elevation is reserved for modal overlays.
 
 ### Decorative Depth
 - The coral snapshot card carries its identity via color alone - no shadow needed; the color does the work.
-- The app mark (`icon-master.svg`) is the one place that carries its own neumorphic depth (paired light/dark drop shadows). It is artwork, not UI elevation - keep it out of the surface hierarchy.
+- The app mark (`icon-master.svg`) is flat - no drop shadow; only its active status dots carry a soft glow. It is artwork, not UI elevation - keep it out of the surface hierarchy.
 
 ## Shapes
 
