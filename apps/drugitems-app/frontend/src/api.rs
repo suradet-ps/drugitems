@@ -43,6 +43,8 @@ pub struct ApiError {
 }
 
 impl ApiError {
+    /// Convert a bridge error into a typed `ApiError`, falling back to the
+    /// `Query` kind when the backend payload is not a typed error.
     fn from_bridge(err: drugitems_bridge::BridgeError) -> Self {
         if let drugitems_bridge::BridgeError::Command(text) = &err
             && let Ok(typed) = serde_json::from_str::<ApiError>(text)
@@ -127,6 +129,7 @@ pub struct SnapshotMeta {
     pub columns: Vec<String>,
 }
 
+/// Invoke a backend command with an already-serializable argument payload.
 async fn invoke_raw<T>(cmd: &str, args: impl Serialize) -> Result<T, ApiError>
 where
     T: serde::de::DeserializeOwned,
@@ -136,6 +139,7 @@ where
         .map_err(ApiError::from_bridge)
 }
 
+/// Invoke a backend command that takes no arguments.
 async fn call_empty<T>(cmd: &str) -> Result<T, ApiError>
 where
     T: serde::de::DeserializeOwned,
@@ -143,6 +147,7 @@ where
     invoke_raw(cmd, serde_json::json!({})).await
 }
 
+/// Invoke a backend command with a single named struct argument.
 async fn call_struct_arg<T>(cmd: &str, arg_name: &str, arg: &impl Serialize) -> Result<T, ApiError>
 where
     T: serde::de::DeserializeOwned,
@@ -223,6 +228,7 @@ pub async fn export_report() -> Result<String, ApiError> {
 mod tests {
     use super::*;
 
+    /// A typed command error payload round-trips into the same `ApiError`.
     #[test]
     fn from_bridge_parses_typed_command_error() {
         let typed = ApiError {
@@ -234,6 +240,7 @@ mod tests {
         assert_eq!(err, typed);
     }
 
+    /// An unparseable command payload falls back to the `Query` kind.
     #[test]
     fn from_bridge_falls_back_to_query_for_unparseable_payload() {
         let err = ApiError::from_bridge(drugitems_bridge::BridgeError::Command("not json".into()));
