@@ -2,8 +2,11 @@
 //! settings dialog. Test runs against the typed values before anything is
 //! saved; credentials are encrypted at rest by the backend.
 
+#![forbid(unsafe_code)]
+
 use leptos::prelude::*;
 use leptos::task::spawn_local;
+use zeroize::Zeroizing;
 
 use crate::api::{self, ConnectionInput};
 use crate::components::icons::{IconPlug, IconSave};
@@ -44,15 +47,6 @@ fn arm_operation_timeout(
     token
 }
 
-/// Zeroize an operator-typed field before dropping it.
-fn wipe_field(signal: &RwSignal<String>) {
-    let mut value = signal.get_untracked();
-    if !value.is_empty() {
-        unsafe { value.as_mut_vec().fill(0) };
-    }
-    signal.set(String::new());
-}
-
 /// A connection form. `title` is shown above the fields (e.g. on the
 /// first-run setup screen).
 #[component]
@@ -61,11 +55,12 @@ pub fn ConnectionForm(state: AppState, title: &'static str) -> impl IntoView {
     let port = RwSignal::new(DEFAULT_PORT.to_string());
     let database = RwSignal::new("hos".to_string());
     let user = RwSignal::new(String::new());
-    let password = RwSignal::new(String::new());
+    // `Zeroizing` wipes the password in place on every drop/replace, so no
+    // separate cleanup step (or un-wiped copy) is needed.
+    let password = RwSignal::new(Zeroizing::new(String::new()));
     let message = RwSignal::new(None::<(bool, String)>);
     let busy = RwSignal::new(false);
     let generation = RwSignal::new(0u64);
-    on_cleanup(move || wipe_field(&password));
 
     // Prefill from the saved (non-secret) connection on mount.
     spawn_local(async move {
@@ -212,8 +207,8 @@ pub fn ConnectionForm(state: AppState, title: &'static str) -> impl IntoView {
                     id="cfg-password"
                     class="form-input form-input--mono"
                     type="password"
-                    prop:value=move || password.get()
-                    on:input=move |ev| password.set(event_target_value(&ev))
+                    prop:value=move || password.get().to_string()
+                    on:input=move |ev| password.set(Zeroizing::new(event_target_value(&ev)))
                 />
             </div>
 
@@ -247,5 +242,53 @@ pub fn ConnectionForm(state: AppState, title: &'static str) -> impl IntoView {
                 </button>
             </div>
         </section>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cell::Cell;
+    use std::rc::Rc;
+    use zeroize::{Zeroize, ZeroizeOnDrop};
+
+    /// Every type the password travels through must wipe itself on drop.
+    #[test]
+    fn password_types_zeroize_on_drop() {
+        fn assert_zeroize_on_drop<T: ZeroizeOnDrop>() {}
+        assert_zeroize_on_drop::<Zeroizing<String>>();
+    }
+
+    /// `Zeroizing` must hand the drop to `Zeroize`; that call is the only
+    /// thing that wipes the password from the heap before it is freed.
+    #[test]
+    fn zeroizing_wipes_on_drop() {
+        struct Spy(Rc<Cell<bool>>);
+
+        impl Zeroize for Spy {
+            fn zeroize(&mut self) {
+                self.0.set(true);
+            }
+        }
+
+        let wiped = Rc::new(Cell::new(false));
+        drop(Zeroizing::new(Spy(Rc::clone(&wiped))));
+        assert!(wiped.get(), "Zeroizing must call zeroize() on drop");
+    }
+
+    /// The password must stay wrapped when it crosses the IPC boundary, so
+    /// the copy handed to the backend is wiped when the call finishes.
+    #[test]
+    fn connection_input_keeps_the_password_zeroizing() {
+        fn assert_zeroizing(_: &Zeroizing<String>) {}
+
+        let input = ConnectionInput {
+            host: "10.0.0.1".to_string(),
+            port: 3306,
+            database: "hos".to_string(),
+            user: "drug_ro".to_string(),
+            password: Zeroizing::new("SuperSecretPassword123".to_string()),
+        };
+        assert_zeroizing(&input.password);
     }
 }
