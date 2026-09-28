@@ -10,6 +10,7 @@
 
 use drugitems_core::CompareReport;
 use serde::{Deserialize, Serialize};
+use zeroize::Zeroizing;
 
 use crate::state::ConnectionHealth;
 
@@ -64,7 +65,8 @@ pub struct ConnectionInput {
     pub port: u16,
     pub database: String,
     pub user: String,
-    pub password: String,
+    /// Wiped in place whenever this input is dropped or replaced.
+    pub password: Zeroizing<String>,
 }
 
 /// Non-secret summary of the saved connection (password never returned).
