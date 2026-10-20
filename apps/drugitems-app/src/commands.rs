@@ -133,8 +133,9 @@ fn map_snapshot_error(err: drugitems_snapshot::SnapshotError) -> CommandError {
 }
 
 /// Connection settings submitted from the settings dialog. The password
-/// lives in this struct only for the duration of the command call.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// deserializes straight into a [`SecretString`], so this layer never owns a
+/// plaintext `String` that could be freed un-zeroed.
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ConnectionInput {
     /// Hostname or IP.
@@ -146,7 +147,7 @@ pub struct ConnectionInput {
     /// Database user.
     pub user: String,
     /// Database password.
-    pub password: String,
+    pub password: SecretString,
 }
 
 impl From<ConnectionInput> for ConnectionConfig {
@@ -156,7 +157,7 @@ impl From<ConnectionInput> for ConnectionConfig {
             port: i.port,
             database: i.database,
             user: i.user,
-            password: SecretString::from(i.password),
+            password: i.password,
         }
     }
 }
@@ -665,4 +666,26 @@ pub async fn export_report(state: State<'_, AppState>) -> Result<String, Command
     })?;
     tracing::info!("report exported");
     Ok(path.display().to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use secrecy::ExposeSecret;
+
+    /// The command DTO receives the password as a secret from the first
+    /// owned copy, with no intermediate plaintext `String` in app code.
+    #[test]
+    fn connection_input_deserializes_password_into_secret_string() {
+        let input: ConnectionInput = serde_json::from_value(serde_json::json!({
+            "host": "10.0.0.1",
+            "port": 3306,
+            "database": "hos",
+            "user": "drug_ro",
+            "password": "s3cret",
+        }))
+        .expect("deserialize connection input");
+
+        assert_eq!(input.password.expose_secret(), "s3cret");
+    }
 }

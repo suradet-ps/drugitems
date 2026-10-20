@@ -139,6 +139,42 @@ where
         .map_err(ApiError::from_bridge)
 }
 
+/// Invoke with a pre-serialized, self-wiping JSON payload.
+async fn call_serialized<T>(cmd: &str, payload: Zeroizing<String>) -> Result<T, ApiError>
+where
+    T: serde::de::DeserializeOwned,
+{
+    drugitems_bridge::invoke_serialized::<T>(cmd, payload)
+        .await
+        .map_err(ApiError::from_bridge)
+}
+
+/// Map a payload serialization failure to the same error shape the bridge
+/// uses, so callers only ever see [`ApiError`].
+fn serialize_error(err: serde_json::Error) -> ApiError {
+    ApiError::from_bridge(drugitems_bridge::BridgeError::Serialize(err.to_string()))
+}
+
+/// Serialize a single named struct argument into one JSON object without
+/// building an intermediate `serde_json::Value` (which would copy secrets).
+///
+/// The returned buffer wipes itself on drop; the caller should drop the
+/// source value before awaiting the backend.
+fn struct_arg_payload<T: Serialize + ?Sized>(
+    arg_name: &str,
+    arg: &T,
+) -> Result<Zeroizing<String>, ApiError> {
+    let mut buf = Zeroizing::new(Vec::<u8>::with_capacity(256));
+    buf.push(b'{');
+    serde_json::to_writer(&mut *buf, arg_name).map_err(serialize_error)?;
+    buf.push(b':');
+    serde_json::to_writer(&mut *buf, arg).map_err(serialize_error)?;
+    buf.push(b'}');
+    let bytes = std::mem::take(&mut *buf);
+    let text = String::from_utf8(bytes).expect("invariant: serde_json emits UTF-8");
+    Ok(Zeroizing::new(text))
+}
+
 /// Invoke a backend command that takes no arguments.
 async fn call_empty<T>(cmd: &str) -> Result<T, ApiError>
 where
@@ -152,7 +188,8 @@ async fn call_struct_arg<T>(cmd: &str, arg_name: &str, arg: &impl Serialize) -> 
 where
     T: serde::de::DeserializeOwned,
 {
-    invoke_raw(cmd, serde_json::json!({ arg_name: arg })).await
+    let payload = struct_arg_payload(arg_name, arg)?;
+    call_serialized(cmd, payload).await
 }
 
 /// Whether stored settings exist.
@@ -171,8 +208,14 @@ pub async fn connection_health() -> Result<ConnectionHealth, ApiError> {
 }
 
 /// Save the connection config (encrypted at rest) and connect.
-pub async fn save_connection(config: &ConnectionInput) -> Result<(), ApiError> {
-    call_struct_arg("save_connection", "config", config).await
+///
+/// Takes ownership so the plaintext input (and its zeroizing password) is
+/// dropped immediately after serialization - the in-flight call then only
+/// holds the self-wiping payload.
+pub async fn save_connection(config: ConnectionInput) -> Result<(), ApiError> {
+    let payload = struct_arg_payload("config", &config)?;
+    drop(config);
+    call_serialized("save_connection", payload).await
 }
 
 /// The saved connection (without the password) - pre-fills the form.
@@ -191,11 +234,15 @@ pub async fn save_settings(settings: &AppSettingsInput) -> Result<(), ApiError> 
 }
 
 /// Test connectivity without saving.
+///
+/// Takes ownership so the plaintext input is dropped right after
+/// serialization, as in [`save_connection`].
 pub async fn test_connection(
-    config: Option<&ConnectionInput>,
+    config: Option<ConnectionInput>,
 ) -> Result<ConnectionTestResult, ApiError> {
-    let args = config.cloned();
-    call_struct_arg("test_connection", "config", &args).await
+    let payload = struct_arg_payload("config", &config)?;
+    drop(config);
+    call_serialized("test_connection", payload).await
 }
 
 /// Clear the saved configuration (forget connection + loaded snapshot).
@@ -245,5 +292,37 @@ mod tests {
     fn from_bridge_falls_back_to_query_for_unparseable_payload() {
         let err = ApiError::from_bridge(drugitems_bridge::BridgeError::Command("not json".into()));
         assert_eq!(err.kind, ApiErrorKind::Query);
+    }
+
+    fn sample_input() -> ConnectionInput {
+        ConnectionInput {
+            host: "10.0.0.1".to_string(),
+            port: 3306,
+            database: "hos".to_string(),
+            user: "drug_ro".to_string(),
+            password: Zeroizing::new("s3cret".to_string()),
+        }
+    }
+
+    /// The secret-bearing payload is one wrapper object, written directly
+    /// instead of through an intermediate `serde_json::Value`.
+    #[test]
+    fn struct_arg_payload_wraps_one_named_argument() {
+        let payload =
+            struct_arg_payload("config", &sample_input()).expect("serialize struct argument");
+        let value: serde_json::Value =
+            serde_json::from_str(&payload).expect("payload must be valid JSON");
+        assert_eq!(value.as_object().map(|object| object.len()), Some(1));
+        assert_eq!(value["config"]["user"], "drug_ro");
+        assert_eq!(value["config"]["password"], "s3cret");
+    }
+
+    /// `None` must stay an explicit `null` argument, matching the backend's
+    /// `Option<ConnectionInput>`.
+    #[test]
+    fn struct_arg_payload_serializes_none_as_null() {
+        let payload =
+            struct_arg_payload("config", &None::<ConnectionInput>).expect("serialize option");
+        assert_eq!(&*payload, "{\"config\":null}");
     }
 }
