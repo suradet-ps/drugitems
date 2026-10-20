@@ -24,6 +24,9 @@ const OPERATION_TIMEOUT_SECS: u64 = 25;
 /// Returns a generation token; only the caller of the current token may
 /// update the busy/message signals, so a stale (late-arriving) result or a
 /// dropped future can never leave the UI stuck.
+///
+/// The timeout only stops the UI waiting - it cannot cancel the backend
+/// call, so that call keeps its self-wiping payload until it returns.
 fn arm_operation_timeout(
     generation: RwSignal<u64>,
     busy: RwSignal<bool>,
@@ -109,7 +112,7 @@ pub fn ConnectionForm(state: AppState, title: &'static str) -> impl IntoView {
         message.set(None);
         let token = arm_operation_timeout(generation, busy, message);
         spawn_local(async move {
-            let result = api::test_connection(Some(&input)).await;
+            let result = api::test_connection(Some(input)).await;
             if generation.get_untracked() == token {
                 match result {
                     Ok(test) => message.set(Some((
@@ -138,7 +141,7 @@ pub fn ConnectionForm(state: AppState, title: &'static str) -> impl IntoView {
         message.set(None);
         let token = arm_operation_timeout(generation, busy, message);
         spawn_local(async move {
-            let result = api::save_connection(&input).await;
+            let result = api::save_connection(input).await;
             if generation.get_untracked() == token {
                 match result {
                     Ok(()) => {
@@ -203,11 +206,12 @@ pub fn ConnectionForm(state: AppState, title: &'static str) -> impl IntoView {
             </div>
             <div class="form-field">
                 <label for="cfg-password">"Password"</label>
+                // Uncontrolled on purpose: binding `prop:value` would copy
+                // the secret back into a temporary `String` on every render.
                 <input
                     id="cfg-password"
                     class="form-input form-input--mono"
                     type="password"
-                    prop:value=move || password.get().to_string()
                     on:input=move |ev| password.set(Zeroizing::new(event_target_value(&ev)))
                 />
             </div>

@@ -98,3 +98,25 @@ live schema before relying on any column's type.
   `tokio::time::timeout` on all I/O; `spawn_blocking` for parsing work.
 - Tests: `#[cfg(test)]` modules alongside code, no external services.
 - Security: never log secrets; `secrecy::SecretString` for passwords.
+
+## Secret Handling (zeroize boundary)
+
+`zeroize` only wipes allocations DrugItems owns. Every new secret-bearing
+path follows the existing connection-form path:
+
+- **Frontend state:** hold the secret in `zeroize::Zeroizing<String>`. The
+  password input is uncontrolled (no `prop:value`); binding the value would
+  copy it into a temporary `String` on every render.
+- **IPC:** build the argument payload once as a `Zeroizing<String>` with
+  `api::struct_arg_payload`, then call
+  `drugitems_bridge::invoke_serialized`. The wasm buffer is wiped right
+  after `JSON.parse`; never route secrets through `serde_json::Value`.
+- **Call sites:** pass `ConnectionInput` to the API by value - `api` drops
+  it after serializing, so an in-flight call holds only the self-wiping
+  payload.
+- **Backend DTO:** deserialize the password straight into
+  `secrecy::SecretString`.
+- **Not defensible with `zeroize`** (documented in issue #22): the DOM
+  value, the JS heap / Tauri IPC buffers, serde temporaries, and calls
+  that outlive the UI timeout. These are per-keystroke or call-lifetime
+  copies; process-memory access (debugger, dump, swap) is out of scope.

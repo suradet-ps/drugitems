@@ -139,6 +139,74 @@ where
         .map_err(ApiError::from_bridge)
 }
 
+/// Invoke with a pre-serialized, self-wiping JSON payload.
+async fn call_serialized<T>(cmd: &str, payload: Zeroizing<String>) -> Result<T, ApiError>
+where
+    T: serde::de::DeserializeOwned,
+{
+    drugitems_bridge::invoke_serialized::<T>(cmd, payload)
+        .await
+        .map_err(ApiError::from_bridge)
+}
+
+/// Map a payload write/serialization failure to the same error shape the
+/// bridge uses, so callers only ever see [`ApiError`].
+fn serialize_error(err: impl std::fmt::Display) -> ApiError {
+    ApiError::from_bridge(drugitems_bridge::BridgeError::Serialize(err.to_string()))
+}
+
+/// A `Write` sink that only counts bytes.
+///
+/// The first pass sizes the real payload buffer exactly, so a growing `Vec`
+/// never frees an allocation that may already contain secret bytes.
+struct CountingWriter(usize);
+
+impl std::io::Write for CountingWriter {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.0 += buf.len();
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+/// Write `{"<arg_name>":<arg>}` to `writer`.
+fn write_struct_arg(
+    writer: &mut impl std::io::Write,
+    arg_name: &str,
+    arg: &(impl Serialize + ?Sized),
+) -> Result<(), ApiError> {
+    writer.write_all(b"{").map_err(serialize_error)?;
+    serde_json::to_writer(&mut *writer, arg_name).map_err(serialize_error)?;
+    writer.write_all(b":").map_err(serialize_error)?;
+    serde_json::to_writer(&mut *writer, arg).map_err(serialize_error)?;
+    writer.write_all(b"}").map_err(serialize_error)?;
+    Ok(())
+}
+
+/// Serialize a single named struct argument into one JSON object without
+/// building an intermediate `serde_json::Value` (which would copy secrets).
+///
+/// The returned buffer wipes itself on drop; the caller should drop the
+/// source value before awaiting the backend.
+fn struct_arg_payload<T: Serialize + ?Sized>(
+    arg_name: &str,
+    arg: &T,
+) -> Result<Zeroizing<String>, ApiError> {
+    // Measure first, then allocate exactly once: if `Vec` had to grow while
+    // writing, the old allocation would be freed without being wiped.
+    let mut counter = CountingWriter(0);
+    write_struct_arg(&mut counter, arg_name, arg)?;
+
+    let mut buf = Zeroizing::new(Vec::<u8>::with_capacity(counter.0));
+    write_struct_arg(&mut *buf, arg_name, arg)?;
+    let bytes = std::mem::take(&mut *buf);
+    let text = String::from_utf8(bytes).expect("invariant: serde_json emits UTF-8");
+    Ok(Zeroizing::new(text))
+}
+
 /// Invoke a backend command that takes no arguments.
 async fn call_empty<T>(cmd: &str) -> Result<T, ApiError>
 where
@@ -152,7 +220,8 @@ async fn call_struct_arg<T>(cmd: &str, arg_name: &str, arg: &impl Serialize) -> 
 where
     T: serde::de::DeserializeOwned,
 {
-    invoke_raw(cmd, serde_json::json!({ arg_name: arg })).await
+    let payload = struct_arg_payload(arg_name, arg)?;
+    call_serialized(cmd, payload).await
 }
 
 /// Whether stored settings exist.
@@ -171,8 +240,14 @@ pub async fn connection_health() -> Result<ConnectionHealth, ApiError> {
 }
 
 /// Save the connection config (encrypted at rest) and connect.
-pub async fn save_connection(config: &ConnectionInput) -> Result<(), ApiError> {
-    call_struct_arg("save_connection", "config", config).await
+///
+/// Takes ownership so the plaintext input (and its zeroizing password) is
+/// dropped immediately after serialization - the in-flight call then only
+/// holds the self-wiping payload.
+pub async fn save_connection(config: ConnectionInput) -> Result<(), ApiError> {
+    let payload = struct_arg_payload("config", &config)?;
+    drop(config);
+    call_serialized("save_connection", payload).await
 }
 
 /// The saved connection (without the password) - pre-fills the form.
@@ -191,11 +266,15 @@ pub async fn save_settings(settings: &AppSettingsInput) -> Result<(), ApiError> 
 }
 
 /// Test connectivity without saving.
+///
+/// Takes ownership so the plaintext input is dropped right after
+/// serialization, as in [`save_connection`].
 pub async fn test_connection(
-    config: Option<&ConnectionInput>,
+    config: Option<ConnectionInput>,
 ) -> Result<ConnectionTestResult, ApiError> {
-    let args = config.cloned();
-    call_struct_arg("test_connection", "config", &args).await
+    let payload = struct_arg_payload("config", &config)?;
+    drop(config);
+    call_serialized("test_connection", payload).await
 }
 
 /// Clear the saved configuration (forget connection + loaded snapshot).
@@ -245,5 +324,53 @@ mod tests {
     fn from_bridge_falls_back_to_query_for_unparseable_payload() {
         let err = ApiError::from_bridge(drugitems_bridge::BridgeError::Command("not json".into()));
         assert_eq!(err.kind, ApiErrorKind::Query);
+    }
+
+    fn sample_input() -> ConnectionInput {
+        ConnectionInput {
+            host: "10.0.0.1".to_string(),
+            port: 3306,
+            database: "hos".to_string(),
+            user: "drug_ro".to_string(),
+            password: Zeroizing::new("placeholder".to_string()),
+        }
+    }
+
+    /// The secret-bearing payload is one wrapper object, written directly
+    /// instead of through an intermediate `serde_json::Value`.
+    #[test]
+    fn struct_arg_payload_wraps_one_named_argument() {
+        let payload =
+            struct_arg_payload("config", &sample_input()).expect("serialize struct argument");
+        let value: serde_json::Value =
+            serde_json::from_str(&payload).expect("payload must be valid JSON");
+        assert_eq!(value.as_object().map(|object| object.len()), Some(1));
+        assert_eq!(value["config"]["user"], "drug_ro");
+        assert_eq!(value["config"]["password"], "placeholder");
+    }
+
+    /// `None` must stay an explicit `null` argument, matching the backend's
+    /// `Option<ConnectionInput>`.
+    #[test]
+    fn struct_arg_payload_serializes_none_as_null() {
+        let payload =
+            struct_arg_payload("config", &None::<ConnectionInput>).expect("serialize option");
+        assert_eq!(&*payload, "{\"config\":null}");
+    }
+
+    /// A long password must not force the payload buffer to grow: the
+    /// counting pass allocates it at its final size, so no allocation that
+    /// held secret bytes is freed unwiped.
+    #[test]
+    fn struct_arg_payload_pre_sizes_for_long_secrets() {
+        let mut input = sample_input();
+        let long = "p".repeat(512);
+        input.password = Zeroizing::new(long.clone());
+
+        let payload = struct_arg_payload("config", &input).expect("serialize long secret");
+        assert_eq!(payload.len(), payload.capacity());
+        let value: serde_json::Value =
+            serde_json::from_str(&payload).expect("payload must be valid JSON");
+        assert_eq!(value["config"]["password"], long);
     }
 }
