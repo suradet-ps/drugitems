@@ -126,7 +126,7 @@ mod tests {
 
     #[tokio::test]
     async fn native_stub_accepts_pre_serialized_payload() {
-        let payload = Zeroizing::new("{\"secret\":\"s3cret\"}".to_string());
+        let payload = Zeroizing::new("{\"secret\":\"placeholder\"}".to_string());
         let r = invoke_serialized::<Ping>("ping", payload).await;
         assert!(matches!(r, Err(BridgeError::NotWebView)));
     }

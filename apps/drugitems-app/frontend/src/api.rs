@@ -149,10 +149,41 @@ where
         .map_err(ApiError::from_bridge)
 }
 
-/// Map a payload serialization failure to the same error shape the bridge
-/// uses, so callers only ever see [`ApiError`].
-fn serialize_error(err: serde_json::Error) -> ApiError {
+/// Map a payload write/serialization failure to the same error shape the
+/// bridge uses, so callers only ever see [`ApiError`].
+fn serialize_error(err: impl std::fmt::Display) -> ApiError {
     ApiError::from_bridge(drugitems_bridge::BridgeError::Serialize(err.to_string()))
+}
+
+/// A `Write` sink that only counts bytes.
+///
+/// The first pass sizes the real payload buffer exactly, so a growing `Vec`
+/// never frees an allocation that may already contain secret bytes.
+struct CountingWriter(usize);
+
+impl std::io::Write for CountingWriter {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.0 += buf.len();
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+/// Write `{"<arg_name>":<arg>}` to `writer`.
+fn write_struct_arg(
+    writer: &mut impl std::io::Write,
+    arg_name: &str,
+    arg: &(impl Serialize + ?Sized),
+) -> Result<(), ApiError> {
+    writer.write_all(b"{").map_err(serialize_error)?;
+    serde_json::to_writer(&mut *writer, arg_name).map_err(serialize_error)?;
+    writer.write_all(b":").map_err(serialize_error)?;
+    serde_json::to_writer(&mut *writer, arg).map_err(serialize_error)?;
+    writer.write_all(b"}").map_err(serialize_error)?;
+    Ok(())
 }
 
 /// Serialize a single named struct argument into one JSON object without
@@ -164,12 +195,13 @@ fn struct_arg_payload<T: Serialize + ?Sized>(
     arg_name: &str,
     arg: &T,
 ) -> Result<Zeroizing<String>, ApiError> {
-    let mut buf = Zeroizing::new(Vec::<u8>::with_capacity(256));
-    buf.push(b'{');
-    serde_json::to_writer(&mut *buf, arg_name).map_err(serialize_error)?;
-    buf.push(b':');
-    serde_json::to_writer(&mut *buf, arg).map_err(serialize_error)?;
-    buf.push(b'}');
+    // Measure first, then allocate exactly once: if `Vec` had to grow while
+    // writing, the old allocation would be freed without being wiped.
+    let mut counter = CountingWriter(0);
+    write_struct_arg(&mut counter, arg_name, arg)?;
+
+    let mut buf = Zeroizing::new(Vec::<u8>::with_capacity(counter.0));
+    write_struct_arg(&mut *buf, arg_name, arg)?;
     let bytes = std::mem::take(&mut *buf);
     let text = String::from_utf8(bytes).expect("invariant: serde_json emits UTF-8");
     Ok(Zeroizing::new(text))
@@ -300,7 +332,7 @@ mod tests {
             port: 3306,
             database: "hos".to_string(),
             user: "drug_ro".to_string(),
-            password: Zeroizing::new("s3cret".to_string()),
+            password: Zeroizing::new("placeholder".to_string()),
         }
     }
 
@@ -314,7 +346,7 @@ mod tests {
             serde_json::from_str(&payload).expect("payload must be valid JSON");
         assert_eq!(value.as_object().map(|object| object.len()), Some(1));
         assert_eq!(value["config"]["user"], "drug_ro");
-        assert_eq!(value["config"]["password"], "s3cret");
+        assert_eq!(value["config"]["password"], "placeholder");
     }
 
     /// `None` must stay an explicit `null` argument, matching the backend's
@@ -324,5 +356,21 @@ mod tests {
         let payload =
             struct_arg_payload("config", &None::<ConnectionInput>).expect("serialize option");
         assert_eq!(&*payload, "{\"config\":null}");
+    }
+
+    /// A long password must not force the payload buffer to grow: the
+    /// counting pass allocates it at its final size, so no allocation that
+    /// held secret bytes is freed unwiped.
+    #[test]
+    fn struct_arg_payload_pre_sizes_for_long_secrets() {
+        let mut input = sample_input();
+        let long = "p".repeat(512);
+        input.password = Zeroizing::new(long.clone());
+
+        let payload = struct_arg_payload("config", &input).expect("serialize long secret");
+        assert_eq!(payload.len(), payload.capacity());
+        let value: serde_json::Value =
+            serde_json::from_str(&payload).expect("payload must be valid JSON");
+        assert_eq!(value["config"]["password"], long);
     }
 }

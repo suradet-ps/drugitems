@@ -682,10 +682,10 @@ mod tests {
             "port": 3306,
             "database": "hos",
             "user": "drug_ro",
-            "password": "s3cret",
+            "password": "placeholder",
         }))
         .expect("deserialize connection input");
 
-        assert_eq!(input.password.expose_secret(), "s3cret");
+        assert_eq!(input.password.expose_secret(), "placeholder");
     }
 }
