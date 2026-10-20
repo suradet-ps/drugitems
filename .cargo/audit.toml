@@ -9,4 +9,15 @@ ignore = [
   # advisory itself notes local use on a non-compromised computer is fine.
   # No patched release exists.
   "RUSTSEC-2023-0071",
+  # zbus 5.x internals unmaintained (merged into zbus 6): pulled in by
+  # keyring/secret-service on Linux only. Windows uses the native store.
+  "RUSTSEC-2026-0370",
+  "RUSTSEC-2026-0371",
+  "RUSTSEC-2026-0372",
+  # zip 8.x extraction advisories. calamine only reads workbook entries and
+  # never calls extract(); it pins zip ^8.6, so no zip 9 upgrade is possible
+  # until calamine releases support for it.
+  "RUSTSEC-2026-0367",
+  "RUSTSEC-2026-0368",
+  "RUSTSEC-2026-0369",
 ]

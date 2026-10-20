@@ -14,29 +14,25 @@ ignore = [
   # local hospital LAN - advisory itself says local use on a non-compromised
   # computer is fine. No patched release exists.
   { id = "RUSTSEC-2023-0071", reason = "sqlx-mysql RSA auth exchange; TLS-only connections, local hospital LAN" },
-  # GTK3 bindings unmaintained (transitive deps of tauri on Linux)
-  "RUSTSEC-2024-0411",
-  "RUSTSEC-2024-0412",
-  "RUSTSEC-2024-0413",
-  "RUSTSEC-2024-0414",
-  "RUSTSEC-2024-0415",
-  "RUSTSEC-2024-0416",
-  "RUSTSEC-2024-0417",
-  "RUSTSEC-2024-0418",
-  "RUSTSEC-2024-0419",
-  "RUSTSEC-2024-0420",
   # proc-macro-error unmaintained (transitive dep of glib/gtk)
   "RUSTSEC-2024-0370",
   # proc-macro-error2 unmaintained (transitive dep of glib/gtk)
   "RUSTSEC-2026-0173",
   # paste unmaintained (transitive dep of glib/gtk, via pest/cfg-if chain)
   "RUSTSEC-2024-0436",
-  # unic-* unmaintained (transitive dep of tauri-utils via urlpattern)
-  "RUSTSEC-2025-0075",
-  "RUSTSEC-2025-0080",
-  "RUSTSEC-2025-0081",
-  "RUSTSEC-2025-0098",
-  "RUSTSEC-2025-0100",
+  # zbus_names / zvariant / zvariant_derive unmaintained as standalone crates;
+  # merged into zbus 6. zbus 5.x is still pulled in by secret-service via
+  # keyring on Linux only (Windows uses windows-native-keyring-store).
+  { id = "RUSTSEC-2026-0370", reason = "zvariant 5.x via keyring/secret-service on Linux; not used on Windows" },
+  { id = "RUSTSEC-2026-0371", reason = "zbus_names 4.x via keyring/secret-service on Linux; not used on Windows" },
+  { id = "RUSTSEC-2026-0372", reason = "zvariant_derive 5.x via keyring/secret-service on Linux; not used on Windows" },
+  # zip extraction advisories (SUID/SGID, symlink escape). calamine only reads
+  # workbook entries via ZipArchive and never calls extract(), so these paths
+  # are unreachable. calamine 0.36.1 (latest) pins zip ^8.6 - no zip 9 upgrade
+  # until a calamine release supports it.
+  { id = "RUSTSEC-2026-0367", reason = "zip extract() unused; calamine only reads xlsx entries and pins zip 8.x" },
+  { id = "RUSTSEC-2026-0368", reason = "zip extract() unused; calamine only reads xlsx entries and pins zip 8.x" },
+  { id = "RUSTSEC-2026-0369", reason = "zip extract() unused; calamine only reads xlsx entries and pins zip 8.x" },
 ]
 
 [licenses]
